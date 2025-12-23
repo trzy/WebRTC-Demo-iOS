@@ -30,7 +30,7 @@ async def websocket_endpoint(websocket: WebSocket):
     
     # Send role assignment to the client
     await websocket.send_text(json.dumps({
-        "type": "role",
+        "type": "RoleMessage",
         "role": role
     }))
 
@@ -39,7 +39,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # Find the initiator (first client in the list)
         initiator = clients[0]
         try:
-            await initiator.send_text(json.dumps({"type": "peer-connected"}))
+            await initiator.send_text(json.dumps({"type": "PeerConnectedMessage"}))
         except:
             pass
     

@@ -31,6 +31,23 @@ async function processEnqueuedICECandidates() {
     iceCandidateQueue = [];
 }
 
+function createOfferMessageFromLocalDescription() {
+    const offer = JSON.stringify(pc.localDescription);
+    const message = { type: "OfferMessage", data: offer };
+    return JSON.stringify(message);
+}
+
+function createAnswerMessageFromLocalDescription() {
+    const offer = JSON.stringify(pc.localDescription);
+    const message = { type: "AnswerMessage", data: offer };
+    return JSON.stringify(message);
+}
+
+function createICECandidateMessage(candidate) {
+    const message = { type: "ICECandidateMessage", data: candidate };
+    return JSON.stringify(message);
+}
+
 // Connect to signaling server
 connectBtn.onclick = () => {
     ws = new WebSocket('ws://localhost:8000/ws');
@@ -41,12 +58,12 @@ connectBtn.onclick = () => {
     };
     
     ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        console.log('Signaling message:', data.type);
+        const message = JSON.parse(event.data);
+        console.log('Signaling message:', message.type);
         
-        if (data.type === 'role') {
+        if (message.type === 'RoleMessage') {
             // Server assigned us a role
-            myRole = data.role;
+            myRole = message.role;
             updateStatus(`Role: ${myRole}`);
             
             if (myRole === 'initiator') {
@@ -57,42 +74,47 @@ connectBtn.onclick = () => {
                 updateStatus('Connected as responder, waiting for offer...');
             }
             
-        } else if (data.type === 'offer') {
+        } else if (message.type === 'OfferMessage') {
             // Responder receives offer
             if (!pc) {
                 initPeerConnection();
             }
-            await pc.setRemoteDescription(data);
+            const offer = JSON.parse(message.data);
+            await pc.setRemoteDescription(offer);
             await processEnqueuedICECandidates();
             
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            ws.send(JSON.stringify(pc.localDescription));
+            ws.send(createAnswerMessageFromLocalDescription());
             updateStatus('Sent answer, establishing connection...');
             
-        } else if (data.type === 'answer') {
+        } else if (message.type === 'AnswerMessage') {
             // Initiator receives answer
-            await pc.setRemoteDescription(data);
+            const answer = JSON.parse(message.data);
+            await pc.setRemoteDescription(answer);
             await processEnqueuedICECandidates();
             updateStatus('Received answer, establishing connection...');
             
-        } else if (data.type === 'ice-candidate' && data.candidate) {
+        } else if (message.type === 'ICECandidateMessage' && message.data) {
+            const candidate = message.data;
             try {
                 if (pc && pc.remoteDescription) {
-                    await pc.addIceCandidate(data.candidate);
+                    await pc.addIceCandidate(candidate);
                 } else {
-                    enqueueICECandidate(data.candidate);
+                    enqueueICECandidate(candidate);
                 }
             } catch (err) {
                 console.error('Error adding ICE candidate:', err);
             }
-        } else if (data.type === 'peer-connected') {
+        } else if (message.type === 'PeerConnectedMessage') {
             // Server notifies initiator that responder connected
             if (myRole === 'initiator') {
                 updateStatus('Peer connected, creating offer...');
                 initPeerConnection();
                 createOffer();
             }
+        } else if (message.type == 'HelloMessage') {
+            console.log('Peer said hello:', message.message);
         }
     };
     
@@ -114,10 +136,7 @@ function initPeerConnection() {
     // ICE candidate handling
     pc.onicecandidate = (e) => {
         if (e.candidate) {
-            ws.send(JSON.stringify({
-                type: 'ice-candidate',
-                candidate: e.candidate
-            }));
+            ws.send(createICECandidateMessage(e.candidate));
         }
     };
     
@@ -163,7 +182,8 @@ function setupDataChannel() {
 async function createOffer() {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    ws.send(JSON.stringify(pc.localDescription));
+    ws.send(createOfferMessageFromLocalDescription());
+    console.log('Offer:', JSON.stringify(pc.localDescription));
     updateStatus('Sent offer, waiting for answer...');
 }
 
