@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CCB0197E2EF88E2B00B00AEA /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = CCB0197D2EF88E2B00B00AEA /* WebRTC */; };
+		CCB01A082EF90A9700B00AEA /* Starscream in Frameworks */ = {isa = PBXBuildFile; productRef = CCB01A072EF90A9700B00AEA /* Starscream */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,9 +34,22 @@
 		CCB019692EF88C8F00B00AEA /* WebRTCDemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WebRTCDemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CCB0198D2EF8FC3300B00AEA /* Exceptions for "WebRTCDemo" folder in "WebRTCDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CCB019512EF88C8E00B00AEA /* WebRTCDemo */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CCB019542EF88C8E00B00AEA /* WebRTCDemo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CCB0198D2EF8FC3300B00AEA /* Exceptions for "WebRTCDemo" folder in "WebRTCDemo" target */,
+			);
 			path = WebRTCDemo;
 			sourceTree = "<group>";
 		};
@@ -57,6 +71,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCB0197E2EF88E2B00B00AEA /* WebRTC in Frameworks */,
+				CCB01A082EF90A9700B00AEA /* Starscream in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,6 +98,7 @@
 				CCB019542EF88C8E00B00AEA /* WebRTCDemo */,
 				CCB019622EF88C8F00B00AEA /* WebRTCDemoTests */,
 				CCB0196C2EF88C8F00B00AEA /* WebRTCDemoUITests */,
+				CCB019802EF8E86000B00AEA /* Frameworks */,
 				CCB019532EF88C8E00B00AEA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -95,6 +111,13 @@
 				CCB019692EF88C8F00B00AEA /* WebRTCDemoUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CCB019802EF8E86000B00AEA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -118,6 +141,7 @@
 			name = WebRTCDemo;
 			packageProductDependencies = (
 				CCB0197D2EF88E2B00B00AEA /* WebRTC */,
+				CCB01A072EF90A9700B00AEA /* Starscream */,
 			);
 			productName = WebRTCDemo;
 			productReference = CCB019522EF88C8E00B00AEA /* WebRTCDemo.app */;
@@ -203,6 +227,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CCB0197C2EF88E2B00B00AEA /* XCRemoteSwiftPackageReference "WebRTC" */,
+				CCB01A062EF90A9700B00AEA /* XCRemoteSwiftPackageReference "Starscream" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CCB019532EF88C8E00B00AEA /* Products */;
@@ -409,11 +434,14 @@
 				DEVELOPMENT_TEAM = 7T2874S592;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WebRTCDemo/Info.plist;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "WebRTC connectivity.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -441,11 +469,14 @@
 				DEVELOPMENT_TEAM = 7T2874S592;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WebRTCDemo/Info.plist;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "WebRTC connectivity.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -593,8 +624,16 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/stasel/WebRTC.git";
 			requirement = {
+				kind = exactVersion;
+				version = 140.0.0;
+			};
+		};
+		CCB01A062EF90A9700B00AEA /* XCRemoteSwiftPackageReference "Starscream" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/daltoniam/Starscream.git";
+			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 141.0.0;
+				minimumVersion = 4.0.8;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -604,6 +643,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CCB0197C2EF88E2B00B00AEA /* XCRemoteSwiftPackageReference "WebRTC" */;
 			productName = WebRTC;
+		};
+		CCB01A072EF90A9700B00AEA /* Starscream */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CCB01A062EF90A9700B00AEA /* XCRemoteSwiftPackageReference "Starscream" */;
+			productName = Starscream;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

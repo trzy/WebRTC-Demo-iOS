@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct WebRTCDemoApp: App {
+    private let _signal = SignalTransport()
+    private let _viewModel = ChatViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: _viewModel)
         }
     }
 }
