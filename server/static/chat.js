@@ -1,10 +1,16 @@
-// WebRTC P2P Chat with WebSocket Signaling
+/*
+ * WebRTC P2P Chat with WebSocket Signaling
+ *
+ *  Resources:
+ *      - https://medium.com/@fengliu_367/getting-started-with-webrtc-a-practical-guide-with-example-code-b0f60efdd0a7
+ */
 
 let pc = null;
 let dataChannel = null;
 let ws = null;
 let myRole = null;
 let iceCandidateQueue = [];
+let localStream = null;
 
 // ICE servers for NAT traversal
 const config = {
@@ -133,6 +139,8 @@ connectBtn.onclick = () => {
 // Initialize peer connection
 function initPeerConnection() {
     pc = new RTCPeerConnection(config);
+
+    pc.addStream(localStream);
     
     // ICE candidate handling
     pc.onicecandidate = (e) => {
@@ -154,6 +162,13 @@ function initPeerConnection() {
     pc.ondatachannel = (e) => {
         dataChannel = e.channel;
         setupDataChannel();
+    };
+
+    // Stream from remote peer
+    pc.onaddstream = (e) => {
+        console.log(`Got remote stream`);
+        const remoteVideo = document.getElementById('remoteVideo');
+        remoteVideo.srcObject = e.stream;
     };
     
     // If we're initiator, create data channel
@@ -221,3 +236,31 @@ function updateStatus(text) {
 
 // Disable send initially
 sendBtn.disabled = true;
+
+/***************************************************************************************************
+ Video
+***************************************************************************************************/
+
+async function initVideoStream() {
+    const localVideo = document.getElementById('localVideo');
+    
+    const constraints = {
+        video: true,
+        audio: false
+    };
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        localVideo.srcObject = stream;
+        return stream;
+    } catch (error) {
+        console.log('Error: Failed to obtain video stream:', error);
+    }
+
+    return null;
+}
+
+localStream = await initVideoStream();
+if (localStream && localStream.getVideoTracks().length > 0) {
+    console.log(`Using video device: ${localStream.getVideoTracks()[0].label}`);
+}

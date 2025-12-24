@@ -36,6 +36,14 @@
     <div>
         <button id="connectBtn">Connect to Signaling Server</button>
     </div>
+
+    <div>
+        <h3>Video</h3>
+        <div id="videoContainer" style="display: flex; gap: 10px;">
+            <div><p>Local</p><video id="localVideo" autoplay muted playsinline style="width: 320px; height: 240px; background: #000;"></video></div>
+            <div><p>Remote</p><video id="remoteVideo" autoplay playsinline style="width: 320px; height: 240px; background: #000;"></video></div>
+        </div>
+    </div>
     
     <div>
         <h3>Chat</h3>
@@ -44,6 +52,7 @@
         <button id="sendBtn">Send</button>
     </div>
 
-    <script src="chat.js"></script>
+    <!-- Must be type "module" so we can immediately start calling async functions -->
+    <script type="module" src="chat.js"></script>
 </body>
 </html>
