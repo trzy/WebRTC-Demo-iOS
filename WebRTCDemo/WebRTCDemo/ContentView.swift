@@ -8,23 +8,15 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var _viewModel = ChatViewModel()
-
-    @State private var _isConnected = false
-
-    init(viewModel: ChatViewModel) {
-        __viewModel = StateObject(wrappedValue: viewModel)
-    }
+    @StateObject var viewModel = ChatViewModel()
+    @Binding var isConnected: Bool
 
     var body: some View {
-        ChatView(viewModel: _viewModel, isEnabled: $_isConnected)
+        ChatView(viewModel: viewModel, isEnabled: $isConnected)
         .padding()
-        Button("Test") {
-            _isConnected.toggle()
-        }
     }
 }
 
 #Preview {
-    ContentView(viewModel: ChatViewModel())
+    ContentView(viewModel: ChatViewModel(), isConnected: .constant(true))
 }

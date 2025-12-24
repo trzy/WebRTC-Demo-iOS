@@ -85,6 +85,30 @@ struct PeerConnectedMessage: Codable, JSONEncodable {
     }
 }
 
+struct ICECandidateMessage: Codable, JSONEncodable {
+    var type: String { return "ICECandidateMessage" }
+    let data: String
+
+    enum CodingKeys: String, CodingKey {
+        case type, data
+    }
+
+    init(data: String) {
+        self.data = data
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        data = try container.decode(String.self, forKey: .data)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encode(data, forKey: .data)
+    }
+}
+
 struct OfferMessage: Codable, JSONEncodable {
     var type: String { return "OfferMessage" }
     let data: String
@@ -137,6 +161,7 @@ enum Message: Decodable {
     case hello(HelloMessage)
     case role(RoleMessage)
     case peerConnected(PeerConnectedMessage)
+    case iceCandidate(ICECandidateMessage)
     case offer(OfferMessage)
     case answer(AnswerMessage)
 
@@ -148,6 +173,7 @@ enum Message: Decodable {
         case hello = "HelloMessage"
         case role = "RoleMessage"
         case peerConnected = "PeerConnectedMessage"
+        case iceCandidate = "ICECandidateMessage"
         case offer = "OfferMessage"
         case answer = "AnswerMessage"
     }
@@ -165,6 +191,9 @@ enum Message: Decodable {
         case .peerConnected:
             let msg = try PeerConnectedMessage(from: decoder)
             self = .peerConnected(msg)
+        case .iceCandidate:
+            let msg = try ICECandidateMessage(from: decoder)
+            self = .iceCandidate(msg)
         case .offer:
             let msg = try OfferMessage(from: decoder)
             self = .offer(msg)

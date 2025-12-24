@@ -5,10 +5,13 @@
 //  Created by Bart Trzynadlowski on 12/21/25.
 //
 
+import Combine
 import Foundation
 import Starscream
 
-class SignalTransport {
+class SignalTransport: ObservableObject {
+    @Published var message: Message?
+
     private let _ws: WebSocket
 
     init() {
@@ -16,6 +19,12 @@ class SignalTransport {
         _ws = WebSocket(request: URLRequest(url: url))
         _ws.delegate = self
         _ws.connect()
+    }
+
+    /// Send a message to peers via the signaling transport.
+    /// - Parameter message: The JSON-encoded message to send.
+    func send(_ message: String) {
+        _ws.write(string: message)
     }
 }
 
@@ -30,13 +39,14 @@ extension SignalTransport: WebSocketDelegate {
         case .text(let string):
             print("[SignalTransport] Received message: \(string)")
 
-            if let messageType = Message.decode(from: string) {
-                switch (messageType) {
+            if let message = Message.decode(from: string) {
+                switch (message) {
                 case .hello(let message):
+                    // This is just an informational message, so we intercept it here
                     print("[SignalTransport] Peer said hello: \(message.message)")
-
                 default:
-                    print("[SignalTransport] Message not handled: \(messageType)")
+                    // Forward the rest to the listener
+                    self.message = message
                 }
             } else {
                 print("[SignalTransport] Ignoring unknown message")

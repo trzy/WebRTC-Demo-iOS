@@ -44,7 +44,8 @@ function createAnswerMessageFromLocalDescription() {
 }
 
 function createICECandidateMessage(candidate) {
-    const message = { type: "ICECandidateMessage", data: candidate };
+    console.log("ICE JSON: " + JSON.stringify(candidate));
+    const message = { type: "ICECandidateMessage", data: JSON.stringify(candidate) };
     return JSON.stringify(message);
 }
 
@@ -96,7 +97,7 @@ connectBtn.onclick = () => {
             updateStatus('Received answer, establishing connection...');
             
         } else if (message.type === 'ICECandidateMessage' && message.data) {
-            const candidate = message.data;
+            const candidate = JSON.parse(message.data);
             try {
                 if (pc && pc.remoteDescription) {
                     await pc.addIceCandidate(candidate);
@@ -136,6 +137,7 @@ function initPeerConnection() {
     // ICE candidate handling
     pc.onicecandidate = (e) => {
         if (e.candidate) {
+            console.log('ICE candidate generated: ' + e.candidate);
             ws.send(createICECandidateMessage(e.candidate));
         }
     };

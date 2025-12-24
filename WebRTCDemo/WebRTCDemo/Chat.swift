@@ -15,10 +15,11 @@ struct ChatMessage: Identifiable {
 }
 
 class ChatViewModel: ObservableObject {
+    /// Complete list of chat messages
     @Published var messages: [ChatMessage] = []
 
-    // Callback for when user sends a message
-    var onMessageSent: ((String) -> Void)?
+    /// Publisher for individual outbound messages (messages sent by us)
+    @Published var outboundMessage: String?
 
     // Call this to inject received messages
     func receiveMessage(_ text: String) {
@@ -30,7 +31,7 @@ class ChatViewModel: ObservableObject {
     func sendMessage(_ text: String) {
         let message = ChatMessage(text: text, isSent: true)
         messages.append(message)
-        onMessageSent?(text)
+        outboundMessage = text
     }
 }
 
