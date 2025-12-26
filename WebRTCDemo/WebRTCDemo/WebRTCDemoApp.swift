@@ -12,7 +12,7 @@ import WebRTC
 @main
 struct WebRTCDemoApp: App {
     private let _transport = SignalTransport()
-    private let _client = WebRTCClient()
+    private let _client = WebRTCClient(receiveMedia: false, cameraPosition: .front)
     private let _viewModel = ChatViewModel()
     private var _subscriptions = Set<AnyCancellable>()
 

@@ -5,9 +5,16 @@
 //  Created by Bart Trzynadlowski on 12/22/25.
 //
 //  Resources:
+//  ----------
 //      - https://medium.com/@ivanfomenko/webrtc-in-swift-in-simple-words-about-the-complex-d9bfe37d4126
 //      - https://github.com/stasel/WebRTC-iOS/blob/main/WebRTC-Demo-App/Sources/Services/WebRTCClient.swift
 //
+//  TODO:
+//  -----
+//  - Fix connection flow in WebRTCClient so that it works in responder mode, too.
+//  - Convert to async interfaces.
+//
+
 
 import Combine
 import WebRTC
@@ -82,20 +89,30 @@ class WebRTCClient: NSObject, ObservableObject {
     private let _factory: RTCPeerConnectionFactory
     private let _peerConnection: RTCPeerConnection
     private var _dataChannel: RTCDataChannel?
+    private var _videoCapturer: RTCVideoCapturer?
+    private var _localVideoTrack: RTCVideoTrack?
+    private var _remoteVideoTrack: RTCVideoTrack?
     private var _role: Role?
     private var _iceCandidateQueue: [RTCIceCandidate] = []
 
-    private let _mediaConstraints = RTCMediaConstraints(
-        mandatoryConstraints: [
-            kRTCMediaConstraintsOfferToReceiveVideo: kRTCMediaConstraintsValueTrue
-        ],
-        optionalConstraints: nil
-    )
+    private let _mediaConstraints: RTCMediaConstraints
 
     override init() {
+        fatalError("Do not use this initializer")
+    }
+
+    init(receiveMedia: Bool, cameraPosition: AVCaptureDevice.Position) {
         _factory = RTCPeerConnectionFactory(
             encoderFactory: RTCDefaultVideoEncoderFactory(),
             decoderFactory: RTCDefaultVideoDecoderFactory()
+        )
+
+        _mediaConstraints = RTCMediaConstraints(
+            mandatoryConstraints: [
+                //TODO: verify that this really does inhibit receiving of video (which should reduce bandwidth)
+                kRTCMediaConstraintsOfferToReceiveVideo: receiveMedia ? kRTCMediaConstraintsValueTrue : kRTCMediaConstraintsValueFalse
+            ],
+            optionalConstraints: nil
         )
 
         let config = RTCConfiguration()
@@ -122,10 +139,33 @@ class WebRTCClient: NSObject, ObservableObject {
 
         super.init()
 
+        peerConnection.delegate = self
+
+        // Create data channel
         _dataChannel = _peerConnection.dataChannel(forLabel: "chat", configuration: RTCDataChannelConfiguration())
         _dataChannel?.delegate = self
 
-        peerConnection.delegate = self
+        // Create video track
+        let (videoCapturer, videoTrack) = createVideoCapturerAndTrack()
+        _videoCapturer = videoCapturer
+        _localVideoTrack = videoTrack
+        peerConnection.add(videoTrack, streamIds: [ "stream" ])
+        _remoteVideoTrack = peerConnection.transceivers.first { $0.mediaType == .video }?.receiver.track as? RTCVideoTrack
+
+        // Start capturing immediately
+        guard let capturer = self._videoCapturer as? RTCCameraVideoCapturer else { return }
+        guard let frontCamera = (RTCCameraVideoCapturer.captureDevices().first { $0.position == cameraPosition }),
+              let format = (RTCCameraVideoCapturer.supportedFormats(for: frontCamera).sorted { (fmt1, fmt2) -> Bool in
+                  let width1 = CMVideoFormatDescriptionGetDimensions(fmt1.formatDescription).width
+                  let width2 = CMVideoFormatDescriptionGetDimensions(fmt2.formatDescription).width
+                  return width1 < width2
+              }).last,
+              // Choose highest FPS
+              let fps = (format.videoSupportedFrameRateRanges.sorted { return $0.maxFrameRate < $1.maxFrameRate }.last) else {
+            return
+        }
+        capturer.startCapture(with: frontCamera, format: format, fps: Int(fps.maxFrameRate))
+        //self._localVideoTrack?.add(renderer)  // if we had a renderer to render to
     }
 
     /// Sets role, which will govern which side will kick off the connection process by producing
@@ -195,6 +235,13 @@ class WebRTCClient: NSObject, ObservableObject {
     func sendTextData(_ text: String) {
         let buffer = RTCDataBuffer(data: text.data(using: .utf8)!, isBinary: false)
         _dataChannel?.sendData(buffer)
+    }
+
+    private func createVideoCapturerAndTrack() -> (RTCVideoCapturer, RTCVideoTrack) {
+        let videoSource = _factory.videoSource()
+        let videoCapturer = RTCCameraVideoCapturer(delegate: videoSource)
+        let videoTrack = _factory.videoTrack(with: videoSource, trackId: "video0")
+        return (videoCapturer, videoTrack)
     }
 
     private func createOffer() {
