@@ -6,6 +6,7 @@
 //
 //  Resources:
 //      - https://medium.com/@ivanfomenko/webrtc-in-swift-in-simple-words-about-the-complex-d9bfe37d4126
+//      - https://github.com/stasel/WebRTC-iOS/blob/main/WebRTC-Demo-App/Sources/Services/WebRTCClient.swift
 //
 
 import Combine
@@ -84,8 +85,18 @@ class WebRTCClient: NSObject, ObservableObject {
     private var _role: Role?
     private var _iceCandidateQueue: [RTCIceCandidate] = []
 
+    private let _mediaConstraints = RTCMediaConstraints(
+        mandatoryConstraints: [
+            kRTCMediaConstraintsOfferToReceiveVideo: kRTCMediaConstraintsValueTrue
+        ],
+        optionalConstraints: nil
+    )
+
     override init() {
-        _factory = RTCPeerConnectionFactory()
+        _factory = RTCPeerConnectionFactory(
+            encoderFactory: RTCDefaultVideoEncoderFactory(),
+            decoderFactory: RTCDefaultVideoDecoderFactory()
+        )
 
         let config = RTCConfiguration()
         config.bundlePolicy = .maxCompat                        // ?
@@ -96,7 +107,12 @@ class WebRTCClient: NSObject, ObservableObject {
         config.keyType = .ECDSA
         config.iceServers = [ RTCIceServer(urlStrings: [ "stun:stun.l.google.com:19302" ]) ]
 
-        let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
+        let constraints = RTCMediaConstraints(
+            mandatoryConstraints: [
+                "DtlsSrtpKeyAgreement": kRTCMediaConstraintsValueTrue    // needed for sharing streams with browsers?
+            ],
+            optionalConstraints: nil
+        )
 
         // Create peer connection to listen on
         guard let peerConnection = _factory.peerConnection(with: config, constraints: constraints, delegate: nil) else {
@@ -106,6 +122,9 @@ class WebRTCClient: NSObject, ObservableObject {
 
         super.init()
 
+        _dataChannel = _peerConnection.dataChannel(forLabel: "chat", configuration: RTCDataChannelConfiguration())
+        _dataChannel?.delegate = self
+
         peerConnection.delegate = self
     }
 
@@ -113,12 +132,6 @@ class WebRTCClient: NSObject, ObservableObject {
     /// an offer once the other side is present. This is assigned by our signaling server.
     func setRole(_ role: Role) {
         _role = role
-
-        if _role == .initiator {
-            let config = RTCDataChannelConfiguration()
-            _dataChannel = _peerConnection.dataChannel(forLabel: "chat", configuration: config)
-            _dataChannel?.delegate = self
-        }
     }
 
     /// Indicates that a remote peer has connected to the signal server and has been assigned a
@@ -185,7 +198,7 @@ class WebRTCClient: NSObject, ObservableObject {
     }
 
     private func createOffer() {
-        _peerConnection.offer(for: .init(mandatoryConstraints: nil, optionalConstraints: nil)) { [weak self] (sdp: RTCSessionDescription?, error: Error?) in
+        _peerConnection.offer(for: _mediaConstraints) { [weak self] (sdp: RTCSessionDescription?, error: Error?) in
             if let error = error {
                 print("[WebRTCClient] Error: Unable to create offer: \(error.localizedDescription)")
                 return
@@ -244,8 +257,7 @@ class WebRTCClient: NSObject, ObservableObject {
 
     private func respondToOffer() {
         // After receiving an offer, create an answer, set that as our local description, and send answer to remote peer
-        let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
-        _peerConnection.answer(for: constraints) { [weak self] (sdp: RTCSessionDescription?, error: Error?) in
+        _peerConnection.answer(for: _mediaConstraints) { [weak self] (sdp: RTCSessionDescription?, error: Error?) in
             if let error = error {
                 print("[WebRTCClient] Error: Unable to create answer: \(error.localizedDescription)")
                 return
