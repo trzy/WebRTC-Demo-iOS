@@ -11,7 +11,6 @@
 //
 //  TODO:
 //  -----
-//  - Fix connection flow in WebRTCClient so that it works in responder mode, too.
 //  - Convert to async interfaces.
 //
 
