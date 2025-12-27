@@ -15,51 +15,78 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Store connected clients with their roles
-clients = []
+# We store only up to two clients who have signaled readiness and been assigned a role.
+# TODO: need to support arbitrary number of clients and match two at a time according to a "room ID"
+client_initiator: WebSocket | None = None
+client_responder: WebSocket | None = None
+
+async def handle_role_assignment(client: WebSocket, data: str) -> bool:
+    global client_initiator
+    global client_responder
+    
+    try:
+        msg = json.loads(data)
+        if msg["type"] == "ReadyToConnectMessage":
+            # First, decide assignment
+            if client_initiator is None:
+                client_initiator = client
+            elif client_responder is None:
+                client_responder = client
+            else:
+                # We already have two peers, reject this one
+                return False
+            
+            # Next, when we have both peers with assigned roles, send role assignment message to
+            # kick off connection process between them
+            if client_initiator is not None and client_responder is not None:
+                await client_initiator.send_text(json.dumps({
+                    "type": "RoleMessage",
+                    "role": "initiator"
+                }))
+                await client_responder.send_text(json.dumps({
+                    "type": "RoleMessage",
+                    "role": "responder"
+                }))
+                return True
+            
+    except Exception as e:
+        print(f"Error: Ignoring non-JSON message: {e}")
+
+    return False
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    
-    # Assign role based on connection order
-    role = "initiator" if len(clients) == 0 else "responder"
-    clients.append(websocket)
-    
-    print(f"Client connected as {role}. Total clients: {len(clients)}")
-    
-    # Send role assignment to the client
-    await websocket.send_text(json.dumps({
-        "type": "RoleMessage",
-        "role": role
-    }))
+    global client_initiator
+    global client_responder
 
-    # If this is the responder (second peer), notify the initiator
-    if role == "responder" and len(clients) == 2:
-        # Find the initiator (first client in the list)
-        initiator = clients[0]
-        try:
-            await initiator.send_text(json.dumps({"type": "PeerConnectedMessage"}))
-        except:
-            pass
+    endpoint = f"{websocket.client.host}:{websocket.client.port}"
+    await websocket.accept()
     
     try:
         while True:
             # Receive message from this client
             data = await websocket.receive_text()
-            print(f"Received from {role}: {data[:100]}...")
+            print(f"Received from {endpoint}: {data[:100]}...")
             
-            # Broadcast to all other clients
-            for client in clients:
-                if client != websocket:
+            # Handle role assignment
+            if await handle_role_assignment(client=websocket, data=data):
+                continue
+
+            # All other messages: broadcast to all other clients
+            for client in [ client_initiator, client_responder ]:
+                if client and client != websocket:
                     try:
                         await client.send_text(data)
                     except:
                         pass
                         
     except WebSocketDisconnect:
-        clients.remove(websocket)
-        print(f"Client disconnected ({role}). Total clients: {len(clients)}")
+        print(f"Client disconnected: {endpoint}")
+        if client_initiator == websocket:
+            client_initiator = None
+        if client_responder == websocket:
+            client_responder = None
 
 # Must be added after WebSocket route
 app.mount("/", StaticFiles(directory="server/static", html=True), name="static")

@@ -37,6 +37,11 @@ async function processEnqueuedICECandidates() {
     iceCandidateQueue = [];
 }
 
+function createReadyToConnectMessage() {
+    const message = { type: "ReadyToConnectMessage" }
+    return JSON.stringify(message)
+}
+
 function createOfferMessageFromLocalDescription() {
     const offer = JSON.stringify(pc.localDescription);
     const message = { type: "OfferMessage", data: offer };
@@ -62,6 +67,9 @@ connectBtn.onclick = () => {
     ws.onopen = () => {
         updateStatus('Connected to signaling server, waiting for role assignment...');
         connectBtn.disabled = true;
+
+        // Indicate to server that we are ready to begin
+        ws.send(createReadyToConnectMessage());
     };
     
     ws.onmessage = async (event) => {
@@ -79,6 +87,12 @@ connectBtn.onclick = () => {
             } else {
                 // We're the responder, wait for offer
                 updateStatus('Connected as responder, waiting for offer...');
+            }
+
+            if (myRole === 'initiator') {
+                updateStatus('Peer connected, creating offer...');
+                initPeerConnection();
+                createOffer();
             }
             
         } else if (message.type === 'OfferMessage') {
@@ -112,13 +126,6 @@ connectBtn.onclick = () => {
                 }
             } catch (err) {
                 console.error('Error adding ICE candidate:', err);
-            }
-        } else if (message.type === 'PeerConnectedMessage') {
-            // Server notifies initiator that responder connected
-            if (myRole === 'initiator') {
-                updateStatus('Peer connected, creating offer...');
-                initPeerConnection();
-                createOffer();
             }
         } else if (message.type == 'HelloMessage') {
             console.log('Peer said hello:', message.message);
