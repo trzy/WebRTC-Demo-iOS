@@ -16,13 +16,27 @@ struct WebRTCDemoApp: App {
     private let _viewModel = ChatViewModel()
     private var _subscriptions = Set<AnyCancellable>()
 
+    @StateObject private var _asyncWebRtcClient = AsyncWebRtcClient()
+
     var body: some Scene {
         WindowGroup {
             ContentView(viewModel: _viewModel, isConnected: .constant(true))    //TODO: properly wire connection state somehow
+                //.environmentObject(_asyncWebRtcClient)
+                .task {
+                    //await _asyncWebRtcClient.run()
+                }
         }
     }
 
     init() {
+        _transport.$isConnected.sink { [weak _client] (isConnected: Bool) in
+            guard let client = _client else { return }
+            if isConnected {
+                // For this simple demo, this will only really work the first time
+                client.start()
+            }
+        }.store(in: &_subscriptions)
+
         _transport.$message.sink { [weak _client] (message: Message?) in
             guard let client = _client,
                   let message = message else {
@@ -31,10 +45,7 @@ struct WebRTCDemoApp: App {
 
             switch (message) {
             case .role(let message):
-                client.setRole(message.role == "initiator" ? .initiator : .responder)
-
-            case .peerConnected(_):
-                client.onPeerAvailable()
+                client.onRoleReceived(message.role == "initiator" ? .initiator : .responder)
 
             case .iceCandidate(let message):
                 client.onICECandidateReceived(jsonString: message.data)
@@ -50,6 +61,13 @@ struct WebRTCDemoApp: App {
                 break;
             }
 
+        }.store(in: &_subscriptions)
+
+        _client.$readyToConnect.sink { [weak _transport] (ready: Bool) in
+            guard let transport = _transport else { return }
+            if ready {
+                transport.send(ReadyToConnectMessage().toJSON())
+            }
         }.store(in: &_subscriptions)
 
         _client.$offer.sink { [weak _transport] (offer: String?) in

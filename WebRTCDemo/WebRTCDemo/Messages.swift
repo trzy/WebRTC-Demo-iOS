@@ -42,6 +42,26 @@ struct HelloMessage: Codable, JSONEncodable {
     }
 }
 
+struct ReadyToConnectMessage: Codable, JSONEncodable {
+    var type: String { return "ReadyToConnectMessage" }
+
+    enum CodingKeys: String, CodingKey {
+        case type
+    }
+
+    init() {
+    }
+
+    init(from decoder: Decoder) throws {
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+    }
+}
+
+
 struct RoleMessage: Codable, JSONEncodable {
     var type: String { return "RoleMessage" }
     let role: String
@@ -63,25 +83,6 @@ struct RoleMessage: Codable, JSONEncodable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(type, forKey: .type)
         try container.encode(role, forKey: .role)
-    }
-}
-
-struct PeerConnectedMessage: Codable, JSONEncodable {
-    var type: String { return "PeerConnectedMessage" }
-
-    enum CodingKeys: String, CodingKey {
-        case type
-    }
-
-    init() {
-    }
-
-    init(from decoder: Decoder) throws {
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(type, forKey: .type)
     }
 }
 
@@ -159,8 +160,8 @@ struct AnswerMessage: Codable, JSONEncodable {
 
 enum Message: Decodable {
     case hello(HelloMessage)
+    case readyToConnect(ReadyToConnectMessage)
     case role(RoleMessage)
-    case peerConnected(PeerConnectedMessage)
     case iceCandidate(ICECandidateMessage)
     case offer(OfferMessage)
     case answer(AnswerMessage)
@@ -171,8 +172,8 @@ enum Message: Decodable {
 
     private enum ObjectType: String, Codable {
         case hello = "HelloMessage"
+        case readyToConnect = "ReadyToConnect"
         case role = "RoleMessage"
-        case peerConnected = "PeerConnectedMessage"
         case iceCandidate = "ICECandidateMessage"
         case offer = "OfferMessage"
         case answer = "AnswerMessage"
@@ -185,12 +186,12 @@ enum Message: Decodable {
         case .hello:
             let msg = try HelloMessage(from: decoder)
             self = .hello(msg)
+        case .readyToConnect:
+            let msg = try ReadyToConnectMessage(from: decoder)
+            self = .readyToConnect(msg)
         case .role:
             let msg = try RoleMessage(from: decoder)
             self = .role(msg)
-        case .peerConnected:
-            let msg = try PeerConnectedMessage(from: decoder)
-            self = .peerConnected(msg)
         case .iceCandidate:
             let msg = try ICECandidateMessage(from: decoder)
             self = .iceCandidate(msg)

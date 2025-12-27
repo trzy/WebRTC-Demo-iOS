@@ -8,6 +8,7 @@
 //  ----------
 //      - https://medium.com/@ivanfomenko/webrtc-in-swift-in-simple-words-about-the-complex-d9bfe37d4126
 //      - https://github.com/stasel/WebRTC-iOS/blob/main/WebRTC-Demo-App/Sources/Services/WebRTCClient.swift
+//      - https://github.com/grbaczek/iOS_WebRTC_VideoChat/blob/main/VideoChat/WebRTC/WebRTCManager.swift
 //
 //  TODO:
 //  -----
@@ -80,6 +81,7 @@ class WebRTCClient: NSObject, ObservableObject {
     }
 
     @Published var isConnected: Bool = false
+    @Published var readyToConnect: Bool = false
     @Published var offer: String?
     @Published var iceCandidate: String?
     @Published var answer: String?
@@ -167,17 +169,17 @@ class WebRTCClient: NSObject, ObservableObject {
         //self._localVideoTrack?.add(renderer)  // if we had a renderer to render to
     }
 
-    /// Sets role, which will govern which side will kick off the connection process by producing
-    /// an offer once the other side is present. This is assigned by our signaling server.
-    func setRole(_ role: Role) {
-        _role = role
+    func start() {
+        readyToConnect = true
     }
 
-    /// Indicates that a remote peer has connected to the signal server and has been assigned a
-    /// role. The connection process will be initatied by the initiator.
-    func onPeerAvailable() {
-        guard _role == .initiator else { return }
-        createOffer()
+    /// Sets role, which will govern which side will kick off the connection process by producing
+    /// an offer once the other side is present. This is assigned by our signaling server.
+    func onRoleReceived(_ role: Role) {
+        _role = role
+        if _role == .initiator {
+            createOffer()
+        }
     }
 
     /// Add an ICE candidate from the remote peer.

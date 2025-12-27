@@ -10,6 +10,7 @@ import Foundation
 import Starscream
 
 class SignalTransport: ObservableObject {
+    @Published var isConnected: Bool = false
     @Published var message: Message?
 
     private let _ws: WebSocket
@@ -35,6 +36,7 @@ extension SignalTransport: WebSocketDelegate {
             print("[SignalTransport] WebSocket connected")
             let hello = HelloMessage(message: "Hello from iOS!")
             _ws.write(string: hello.toJSON())
+            isConnected = true
 
         case .text(let string):
             print("[SignalTransport] Received message: \(string)")
@@ -54,6 +56,7 @@ extension SignalTransport: WebSocketDelegate {
 
         case .disconnected(let reason, let code):
             print("[SignalTransport] WebSocket disconnected: \(reason) with code: \(code)")
+            isConnected = false
 
         case .error(let error):
             print("[SignalTransport] WebSocket error: \(error?.localizedDescription ?? "Unknown error")")
