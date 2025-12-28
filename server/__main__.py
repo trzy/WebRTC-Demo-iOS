@@ -32,9 +32,6 @@ async def handle_role_assignment(client: WebSocket, data: str) -> bool:
                 client_initiator = client
             elif client_responder is None:
                 client_responder = client
-            else:
-                # We already have two peers, reject this one
-                return False
             
             # Next, when we have both peers with assigned roles, send role assignment message to
             # kick off connection process between them
