@@ -12,22 +12,91 @@ import WebRTC
 @main
 struct WebRTCDemoApp: App {
     private let _transport = SignalTransport()
-    private let _client = WebRTCClient(receiveMedia: false, cameraPosition: .front)
+    //private let _client = WebRTCClient(receiveMedia: false, cameraPosition: .front)
     private let _viewModel = ChatViewModel()
     private var _subscriptions = Set<AnyCancellable>()
 
     @StateObject private var _asyncWebRtcClient = AsyncWebRtcClient()
+    @State private var _isConnected: Bool = false
 
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: _viewModel, isConnected: .constant(true))    //TODO: properly wire connection state somehow
-                //.environmentObject(_asyncWebRtcClient)
+            ContentView(viewModel: _viewModel, isConnected: $_isConnected)   //TODO: properly wire connection state somehow
+                .environmentObject(_asyncWebRtcClient)
                 .task {
-                    //await _asyncWebRtcClient.run()
+                    // Run WebRTC on connection to signaling server
+                    for await isConnected in _transport.$isConnected.values {
+                        if isConnected {
+                            print("Connected")
+                            await _asyncWebRtcClient.run()
+                        }
+                    }
+                }
+                .task {
+                    // Disconnect
+                    for await isConnected in _transport.$isConnected.values {
+                        if !isConnected {
+                            print("Disconnected")
+                            await _asyncWebRtcClient.stop()
+                        }
+                    }
+                }
+                .task {
+                    // When WebRTC is locally ready to establish a connection, let the signaling
+                    // server know
+                    for await _ in _asyncWebRtcClient.readyToConnectEvent {
+                        _transport.send(ReadyToConnectMessage().toJSON())
+                    }
+                }
+                .task {
+                    for await sdp in _asyncWebRtcClient.offerToSend {
+                        _transport.send(OfferMessage(data: sdp).toJSON())
+                    }
+                }
+                .task {
+                    for await sdp in _asyncWebRtcClient.answerToSend {
+                        _transport.send(AnswerMessage(data: sdp).toJSON())
+                    }
+                }
+                .task {
+                    for await candidate in _asyncWebRtcClient.iceCandidateToSend {
+                        _transport.send(ICECandidateMessage(data: candidate).toJSON())
+                    }
+                }
+                .task {
+                    for await textData in _asyncWebRtcClient.textDataReceived {
+                        _viewModel.receiveMessage(textData)
+                    }
+                }
+                .task {
+                    for await isConnected in _asyncWebRtcClient.isConnected {
+                        _isConnected = isConnected
+                    }
+                }
+                .task {
+                    for await message in _transport.$message.values {
+                        switch (message) {
+                        case .role(let message):
+                            await _asyncWebRtcClient.onRoleAssigned(message.role == "initiator" ? .initiator : .responder)
+
+                        case .iceCandidate(let message):
+                            await _asyncWebRtcClient.onIceCandidateReceived(jsonString: message.data)
+
+                        case .offer(let message):
+                            await _asyncWebRtcClient.onOfferReceived(jsonString: message.data)
+
+                        case .answer(let message):
+                            await _asyncWebRtcClient.onAnswerReceived(jsonString: message.data)
+
+                        default:
+                            //TODO: not yet implemented
+                            break;
+                        }
+                    }
                 }
         }
     }
-
+/*
     init() {
         _transport.$isConnected.sink { [weak _client] (isConnected: Bool) in
             guard let client = _client else { return }
@@ -110,4 +179,5 @@ struct WebRTCDemoApp: App {
             client.sendTextData(message)
         }.store(in: &_subscriptions)
     }
+ */
 }
