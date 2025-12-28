@@ -74,6 +74,13 @@ struct WebRTCDemoApp: App {
                     }
                 }
                 .task {
+                    for await text in _viewModel.$outboundMessage.values {
+                        if let text = text {
+                            await _asyncWebRtcClient.sendTextData(text)
+                        }
+                    }
+                }
+                .task {
                     for await message in _transport.$message.values {
                         switch (message) {
                         case .role(let message):

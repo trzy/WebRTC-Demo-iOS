@@ -113,7 +113,7 @@ actor AsyncWebRtcClient: ObservableObject {
     // MARK: API - Methods
 
     init(queue: DispatchQueue = .main) {
-        RTCSetMinDebugLogLevel(RTCLoggingSeverity.info)
+        //RTCSetMinDebugLogLevel(RTCLoggingSeverity.info)
 
         _factory = RTCPeerConnectionFactory(
             encoderFactory: RTCDefaultVideoEncoderFactory(),
@@ -229,6 +229,16 @@ actor AsyncWebRtcClient: ObservableObject {
         }
     }
 
+    /// Send a string on the chat data channel.
+    func sendTextData(_ text: String) async {
+        let buffer = RTCDataBuffer(data: text.data(using: .utf8)!, isBinary: false)
+        guard let dataChannel = _dataChannel else {
+            await logError("No data channel to send on")
+            return
+        }
+        dataChannel.sendData(buffer)
+    }
+
     // MARK: Internal
 
     /// Runs the client for one connection session and returns true if canceled, otherwise false
@@ -331,7 +341,7 @@ actor AsyncWebRtcClient: ObservableObject {
                     }
 
                     // We are connected, start video capture
-                    try await startCapture()
+                    await startCapture()
 
                     // Wait for disconnect or fail
                     for await state in _peerConnectionState {
@@ -378,12 +388,13 @@ actor AsyncWebRtcClient: ObservableObject {
         _peerConnection = peerConnection
 
         // Create a data channel
-        if let dataChannel = peerConnection.dataChannel(forLabel: "data", configuration: RTCDataChannelConfiguration()) {
+        if let dataChannel = peerConnection.dataChannel(forLabel: "chat", configuration: RTCDataChannelConfiguration()) {
             let task = Task { @MainActor in
                 dataChannel.delegate = _rtcDelegateAdapter
             }
             await task.value
             _dataChannel = dataChannel
+            await log("Created data channel")
         }
 
         // Create video track
@@ -485,14 +496,12 @@ actor AsyncWebRtcClient: ObservableObject {
 
     private func createConnectionConfiguration() -> (RTCConfiguration, RTCMediaConstraints) {
         let config = RTCConfiguration()
-//        config.bundlePolicy = .maxCompat                        // ?
-//        config.continualGatheringPolicy = .gatherContinually    // ?
-//        config.rtcpMuxPolicy = .require                         // ?
-//        config.iceTransportPolicy = .all
-//        config.tcpCandidatePolicy = .enabled
-//        config.keyType = .ECDSA
-        config.sdpSemantics = .unifiedPlan
-        config.continualGatheringPolicy = .gatherContinually
+        config.bundlePolicy = .maxCompat                        // ?
+        config.continualGatheringPolicy = .gatherContinually    // ?
+        config.rtcpMuxPolicy = .require                         // ?
+        config.iceTransportPolicy = .all
+        config.tcpCandidatePolicy = .enabled
+        config.keyType = .ECDSA
 
         config.iceServers = _iceServers
 
@@ -518,7 +527,7 @@ actor AsyncWebRtcClient: ObservableObject {
         return (videoCapturer, videoTrack)
     }
 
-    private func startCapture() async throws {
+    private func startCapture() {
         // Start capturing immediately
         guard let capturer = self._videoCapturer as? RTCCameraVideoCapturer else { return }
         guard let frontCamera = (RTCCameraVideoCapturer.captureDevices().first { $0.position == .front }),
@@ -531,8 +540,16 @@ actor AsyncWebRtcClient: ObservableObject {
               let fps = (format.videoSupportedFrameRateRanges.sorted { return $0.maxFrameRate < $1.maxFrameRate }.last) else {
             return
         }
-        try await capturer.startCapture(with: frontCamera, format: format, fps: Int(fps.maxFrameRate))
-        await log("Started video capture")
+
+        // NOTE: Never use the async version of the below function. This enclosing method must be
+        // declared synchronous in order to use the synchronous version below. I am not sure why,
+        // but it will quickly degrade the connection and result in disconnects.
+        capturer.startCapture(with: frontCamera, format: format, fps: Int(fps.maxFrameRate))
+        Task { @MainActor in log("Started video capture") }
+    }
+
+    private func setDataChannel(_ dataChannel: RTCDataChannel) {
+        _dataChannel = dataChannel
     }
 }
 

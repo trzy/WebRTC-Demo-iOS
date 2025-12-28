@@ -278,6 +278,8 @@ class WebRTCClient: NSObject, ObservableObject {
         _peerConnection.add(candidate) { error in
             if let error = error {
                 print("[WebRTCClient] Error: Unable to add ICE candidate: \(error.localizedDescription)")
+            } else {
+                print("[WebRTCClient] Added ICE candidate")
             }
         }
     }
